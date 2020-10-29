@@ -1,6 +1,7 @@
 const router = require('koa-router')()
 const net = require('net')
 const { encodeInstruction, decodeKeepAlive } = require('../../../../modules/tools')
+const tcpServer = require('../../../../modules/tcpserver')
 
 //  第一路继电器开
 const setChannel_1OnStr = 'fe 05 00 00 ff 00 98 35'
@@ -14,6 +15,13 @@ const setChannel_2OffStr = 'fe 05 00 01 00 00 88 05'
 const keepAliveStr = 'fe 04 03 e8 00 14 64 7a'
 
 router.get('/', async (ctx, next) => {
+
+    const res = await tcpServer(encodeInstruction(setChannel_1OnStr)).catch(err => console.log(err))
+
+
+    ctx.body = {
+        res
+    }
 
     // tcpClient.write(encodeInstruction(setChannel_1OnStr))
 
