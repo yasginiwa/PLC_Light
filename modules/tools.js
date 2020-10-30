@@ -1,6 +1,5 @@
 const bcrypt = require('bcrypt')
 const Iconv = require('iconv').Iconv
-
 const iconv = new Iconv('utf8', 'ISO-8859-1')
 
 const tools = {
@@ -38,13 +37,21 @@ const tools = {
 
     //  PLC指令重编码
     encodeInstruction(hexStr) {
-
+        
         let instruction = ''
-        let tempArr = hexStr.split(' ')
+        let tempArr = []
+
+        for (let i = 0; i < hexStr.length; i++) {
+            let tempStr = hexStr.substring(i, 2 + i)
+            tempArr.push(tempStr)
+            tempStr = ''
+            ++i
+        }
 
         let instructionArr = tempArr.map(v => {
             return String.fromCharCode(tools.hex2int(v))
         })
+
 
         instructionArr.forEach(v => instruction += v)
 

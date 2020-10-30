@@ -7,6 +7,8 @@ module.exports = function TCPServer(instruction) {
             // 'connection' 监听器。
             console.log('客户端已连接')
 
+            client.setTimeout(3000)
+
             client.write(instruction)
     
             client.on('data', data => {
@@ -18,14 +20,21 @@ module.exports = function TCPServer(instruction) {
             })
         })
 
-        server.write
-    
-        server.on('error', (err) => {
-            reject(err)
+        server.on('timeout', () => {
+            console.log('超时')
         })
     
+        server.on('error', (err) => {
+            if (err === 'EADDRINUSE') {
+                server.close()
+            }
+            reject(err)
+        })
+
+        server.close()
+    
         server.listen(60001, () => {
-            console.log('TCP Server is running on 127.0.0.1:60001');
+            console.log('TCP Server is running on 127.0.0.1:60001')
         })
     })
 }
