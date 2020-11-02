@@ -10,6 +10,8 @@ const users = require('./routes/api/v1/private/users')
 const categories = require('./routes/api/v1/private/categories')
 const openid = require('./routes/api/v1/public/openid')
 const dam = require('./routes/api/v1/public/dam')
+const tcpServer = require('./modules/tcpserver')
+
 
 let app = new Koa()
 

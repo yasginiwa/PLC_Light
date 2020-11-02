@@ -19,18 +19,16 @@ const keepAliveStr = 'fe0403e80014647a'
 
 router.get('/', async (ctx, next) => {
 
-    const res = await tcpServer(encodeInstruction(setChannel_1OffStr)).catch(err => {
-
-        if (err.code === 'EADDRINUSE') { // 重复发用一条指令 报address already in use错误 换成相反状态指令
-            tcpServer(encodeInstruction(setChannel_1OffStr))
-        } else {
+    tcpServer.instruction = encodeInstruction(setChannel_1OnStr)
+    const res = await tcpServer().catch(err => {
+        if (err) { // 重复发用一条指令 报address already in use错误 换成相反状态指令
             console.log(err)
             ctx.sendResult(null, 400, '操作失败')
             return
         }
     })
 
-    ctx.sendResult( {data: res}, 200, '操作成功')
+    ctx.sendResult({ data: res }, 200, '操作成功')
     next()
 })
 
