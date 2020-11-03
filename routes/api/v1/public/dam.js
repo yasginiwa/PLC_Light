@@ -1,7 +1,7 @@
 const router = require('koa-router')()
 const net = require('net')
 const { encodeInstruction, decodeKeepAlive } = require('../../../../modules/tools')
-const TcpServer = require('../../../../modules/tcpserver')
+
 
 const testStr = 'fe050000ff009835'
 
@@ -14,23 +14,25 @@ const setChannel_1OffStr = 'fe0500000000d9c5'
 const setChannel_2OnStr = 'fe050001ff00c9f5'
 //  第二路继电器关
 const setChannel_2OffStr = 'fe05000100008805'
-//  心跳码
-const keepAliveStr = 'fe0403e80014647a'
 
 router.get('/', async (ctx, next) => {
 
-    const instruction = setChannel_1OnStr
+    let tc = await require('../../../../modules/tcpserver')
 
-    const options = client => {
+    tc.write(encodeInstruction(setChannel_1OnStr))
 
-        client.on('data', data => {
-            console.log(data.toString('hex'))
+    // const instruction = setChannel_1OnStr
 
-            ctx.sendResult({ data }, 200, '操作成功')
-        })
-    }
+    // const options = client => {
 
-    TcpServer.getInstance(instruction, options)
+    //     client.on('data', data => {
+    //         console.log(data.toString('hex'))
+
+    //         ctx.sendResult({ data }, 200, '操作成功')
+    //     })
+    // }
+
+    // TcpServer.getInstance(instruction, options)
 
 
     // const res = await tcpServer.catch(err => {

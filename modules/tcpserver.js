@@ -10,37 +10,60 @@ class TcpServer {
         return TcpServer.instance
     }
 
-    constructor(instruction, options) {
+    // constructor(instruction, options) {
 
-        this.instruction = instruction || ''
+    // this.instruction = instruction || ''
 
-        this.options = options || function (client) {
-            console.log('客户端连接')
-            client.on('data', data => {
-                console.log(data.toString('hex'))
+    // this.options = options || function (client) {
+    //     console.log('客户端连接')
+    //     client.on('data', data => {
+    //         console.log(data.toString('hex'))
+    //     })
+
+    //     if (this.instruction) {
+    //         client.write(encodeInstruction(this.instruction))
+    //     }
+
+    //     client.on('end', () => {
+    //         console.log('客户端断开连接')
+    //     })
+
+    //     client.on('error', error => {
+    //         console.log('连接错误', error)
+    //     })
+    // }
+
+    // console.log(this.instruction, this.options)
+
+    // this.server = net.createServer(this.options)
+
+    //     this.server.listen(60001, () => {
+    //         console.log('TCP Server is running on 127.0.0.1:60001')
+    //     })
+
+    // }
+
+    constructor() {
+        return new Promise((resolve, reject) => {
+            let server = net.createServer(client => {
+
+                console.log('客户端已连接')
+
+                client.on('data', data => {
+                    console.log(data)
+                })
+
+                resolve(client)
             })
 
-            if (this.instruction) {
-                client.write(encodeInstruction(this.instruction))
-            }
-
-            client.on('end', () => {
-                console.log('客户端断开连接')
+            server.on('error', error => {
+                reject(error)
             })
 
-            client.on('error', error => {
-                console.log('连接错误', error)
+            server.listen(60001, () => {
+                console.log('TCP Server is running on 127.0.0.1:60001')
             })
-        }
-
-        console.log(this.instruction, this.options)
-
-        this.server = net.createServer(this.options)
-
-        this.server.listen(60001, () => {
-            console.log('TCP Server is running on 127.0.0.1:60001')
         })
-
     }
 
 
@@ -92,7 +115,7 @@ class TcpServer {
 
 }
 
-module.exports = TcpServer
+module.exports = TcpServer.getInstance()
 
 // module.exports = function TCPServer(instruction) {
 
