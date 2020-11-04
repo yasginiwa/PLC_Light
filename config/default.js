@@ -20,5 +20,19 @@ module.exports = {
     weapp_config: {
         appid: 'wx6e12c795fe0e73c5',
         secret: '1efc00a55d22cc93edce26bc8561f194'
+    },
+    openRelay: {
+        ch0: '050000ff00',
+        ch1: '050001ff00'
+    },
+    closeRelay: {
+        ch0: '0500000000',
+        ch1: '0500010000'
+    },
+    openAllRelay: {
+        str: 'fe050000ff009835'
+    },
+    closeAllRelay: {
+        str: 'fe0500000000d9c5'
     }
 }

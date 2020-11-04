@@ -56,11 +56,6 @@ const tools = {
         instructionArr.forEach(v => instruction += v)
 
         return iconv.convert(instruction)
-    },
-
-    //  PLC心跳接受结果转码
-    decodeKeepAlive(data) {
-        return data.toString().slice(3, -2)
     }
 }
 
