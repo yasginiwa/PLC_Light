@@ -30,9 +30,9 @@ module.exports = {
         ch1: '0500010000'
     },
     openAllRelay: {
-        str: 'fe050000ff009835'
+        ch_all: 'fe050000ff009835'
     },
     closeAllRelay: {
-        str: 'fe0500000000d9c5'
+        ch_all: 'fe0500000000d9c5'
     }
 }

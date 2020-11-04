@@ -33,16 +33,17 @@ router.get('/equipopr', async (ctx, next) => {
     //  操作通道
     let ch = ''
     if (oprtype === 'open') {
-        ch = channel ? openRelay.ch1 : openRelay.ch0
+        ch = (channel === '0' ? openRelay.ch0 : openRelay.ch1)
+    } else if (oprtype === 'close') {
+        ch = (channel === '0' ? closeRelay.ch0 : closeRelay.ch1)
     } else {
-        ch = channel ? closeRelay.ch1 : closeRelay.ch0
+        ctx.sendResult(null, 400, '参数错误')
     }
     //  crc16校验码
     let sum = crc16.checkSum(equipAddr + ch)
     //  拼接操作指令
     let instruction = equipAddr + ch + sum
 
-    console.log(instruction)
     //  tc = tcpClient 获取tcp服务器中的client
     let tc = await require('../../../../modules/tcpserver').catch(err => {
         ctx.sendResult({ data: err }, 400, '操作失败')
@@ -59,6 +60,48 @@ router.get('/equipopr', async (ctx, next) => {
     })
     //  接口返回数据
     ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
+
+    next()
+})
+
+
+//  操作所有的设备
+router.get('/equipallopr', async (ctx, next) => {
+
+    const { oprtype } = ctx.request.query
+
+    let instruction = ''
+
+    if (oprtype === 'open') {
+
+        instruction = openAllRelay.ch_all
+
+    } else if (oprtype === 'close') {
+
+        instruction = closeAllRelay.ch_all
+
+    } else {
+
+        ctx.sendResult(null, 400, '参数错误')
+    }
+
+    //  tc = tcpClient 获取tcp服务器中的client
+    let tc = await require('../../../../modules/tcpserver').catch(err => {
+        ctx.sendResult({ data: err }, 400, '操作失败')
+        return
+    })
+    //  tc写指令
+    tc.write(encodeInstruction(instruction))
+
+    //  tcp服务器接收返回指令
+    const res = await new Promise(resolve => {
+        tc.on('data', data => {
+            console.log(data)
+            resolve(data)
+        })
+    })
+    //  接口返回数据
+    ctx.sendResult({ shopid: 'all', oprtype }, 200, '操作成功')
 
     next()
 })
