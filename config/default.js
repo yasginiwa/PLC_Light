@@ -21,18 +21,21 @@ module.exports = {
         appid: 'wx6e12c795fe0e73c5',
         secret: '1efc00a55d22cc93edce26bc8561f194'
     },
-    openRelay: {
+    openSingleRelay: {
         ch0: '050000ff00',
         ch1: '050001ff00'
     },
-    closeRelay: {
+    closeSingleRelay: {
         ch0: '0500000000',
         ch1: '0500010000'
     },
     openAllRelay: {
-        ch_all: 'fe050000ff009835'
+        ch_all: '0f0000000201ff'
     },
     closeAllRelay: {
-        ch_all: 'fe0500000000d9c5'
+        ch_all: '0f000000020100'
+    },
+    sigleRelayStatus: {
+        status: '0403e80014'
     }
 }
