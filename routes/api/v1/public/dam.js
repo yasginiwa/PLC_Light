@@ -33,38 +33,34 @@ router.get('/singleEquipOpr', async (ctx, next) => {
     //  操作通道
     let ch = ''
 
-    if (parseInt(channel) === NaN && oprtype === 'open') {
-        ch = openAllRelay.ch_all
-    } else {
-        ch = closeAllRelay.ch_all
-    }
-
     //  操作单通道或者所有通道 标记 true为所有通道 false为单通道
-    let flag = parseInt(channel) === NaN
+    let flag = isNaN(parseInt(channel)) 
 
-    console.log(flag)
-
-    if (oprtype === 'open') {
-        if (flag) {
-            ch = (channel === '0' ? openSingleRelay.ch0 : openSingleRelay.ch1)
-        } else {
+    if (flag) {
+        if (oprtype === 'open') {
             ch = openAllRelay.ch_all
+        } else if (oprtype === 'close') {
+            ch = closeAllRelay.ch_all
+        } else {
+            ctx.sendResult(null, 400, '参数错误')
+            return
         }
-    } else if (oprtype === 'close') {
-        if (flag) {
+    } else {
+        if (oprtype === 'open') {
+            ch = (channel === '0' ? openSingleRelay.ch0 : openSingleRelay.ch1)
+        } else if (oprtype === 'close') {
             ch = (channel === '0' ? closeSingleRelay.ch0 : closeSingleRelay.ch1)
         } else {
-            ch = closeAllRelay.ch_all
+            ctx.sendResult(null, 400, '参数错误')
+            return
         }
-    } else {
-        ctx.sendResult(null, 400, '参数错误')
     }
 
     //  crc16校验码
     let sum = crc16.checkSum(equipAddr + ch)
     //  拼接操作指令
     let instruction = equipAddr + ch + sum
-    console.log(equipAddr + ch + sum)
+
     //  tc = tcpClient 获取tcp服务器中的client
     let tc = await require('../../../../modules/tcpserver').catch(err => {
         ctx.sendResult({ data: err }, 400, '操作失败')
@@ -79,6 +75,7 @@ router.get('/singleEquipOpr', async (ctx, next) => {
             resolve(data)
         })
     })
+
     //  接口返回数据
     ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
 

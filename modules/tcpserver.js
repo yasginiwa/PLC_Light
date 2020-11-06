@@ -3,20 +3,30 @@ const { encodeInstruction } = require('./tools')
 
 class TcpServer {
     //  单例模式
-    static getInstance() {
-        if (!TcpServer.instance) {
-            TcpServer.instance = new TcpServer()
-        }
-        return TcpServer.instance
-    }
+    // static getInstance() {
+    //     if (!TcpServer.instance) {
+    //         TcpServer.instance = new TcpServer()
+    //     }
+    //     return TcpServer.instance
+    // }
 
     constructor() {
         return new Promise((resolve, reject) => {
             let server = net.createServer(client => {
+                
+                console.log(`客户端 ${client.remoteAddress.substr(7, 12)}:${client.remotePort} 已连接`)
 
-                console.log('客户端已连接')
+                client.setTimeout(5000, () => {
+                    console.log('TCP连接超时')
+                })
 
                 resolve(client)
+            })
+
+            server.maxConnections = 200
+
+            server.on('data', data => {
+                console.log(data)
             })
 
             server.on('error', error => {
@@ -30,4 +40,4 @@ class TcpServer {
     }
 }
 
-module.exports = TcpServer.getInstance()
+module.exports = new TcpServer()
