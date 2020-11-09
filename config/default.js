@@ -35,7 +35,7 @@ module.exports = {
     closeAllRelay: {
         ch_all: '0f000000020100'
     },
-    sigleRelayStatus: {
+    singleRelayStatus: {
         status: '0403e80014'
     }
 }

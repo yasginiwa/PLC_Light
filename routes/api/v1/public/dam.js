@@ -1,31 +1,68 @@
 const router = require('koa-router')()
 const net = require('net')
 const { encodeInstruction } = require('../../../../modules/tools')
-const { openSingleRelay, closeSingleRelay, openAllRelay, closeAllRelay } = require('../../../../config/default')
+const { openSingleRelay, closeSingleRelay, openAllRelay, closeAllRelay, singleRelayStatus } = require('../../../../config/default')
 const crc16 = require('node-crc16')
 
 //  获取所有设备在线信息
 router.get('/', async (ctx, next) => {
 
-    let tc = await require('../../../../modules/tcpserver').catch(err => {
-        ctx.sendResult({ data: err }, 400, '指令发送失败')
-        return
+    let clientList = await require('../../../../modules/tcpserver')
+
+    clientList.forEach(v => {
+        v.end()
     })
 
-    tc.write(encodeInstruction(testStr))
+    
 
-    const res = await new Promise(resolve => {
-        tc.on('data', data => {
-            resolve(data)
-        })
-    })
+    // clientList.forEach((v, i) => {
 
-    ctx.sendResult({ data: res.toString('hex') }, 200, '指令发送成功')
+    //     let equipAddr = parseInt(i + 1).toString(16).padStart(2, 0)
+
+    //     let sum = crc16.checkSum(equipAddr + singleRelayStatus.status)
+
+    //     let statusInstruction = equipAddr + singleRelayStatus.status + sum
+
+    //     console.log(statusInstruction)
+
+    //     v.write(encodeInstruction(statusInstruction))
+
+    //     v.on('data', data => {
+    //         //  状态探测指令的返回Buffer长度是45 
+    //         if (data.length === 45) {
+    //             console.log('res', data)
+    //             // v.end()
+    //         }
+    //     })
+
+    //     v.on('close', () => {
+    //         console.log('客户端断开连接')
+    //     })
+
+    //     v.on('error', err => {
+    //         v.destroy()
+    //     })
+    // })
+
+    // let tc = await require('../../../../modules/tcpserver').catch(err => {
+    //     ctx.sendResult({ data: err }, 400, '指令发送失败')
+    //     return
+    // })
+
+    // tc.write(encodeInstruction(testStr))
+
+    // const res = await new Promise(resolve => {
+    //     tc.on('data', data => {
+    //         resolve(data)
+    //     })
+    // })
+
+    // ctx.sendResult({ data: res.toString('hex') }, 200, '指令发送成功')
 
     next()
 })
 
-//  操作单个(门店)设备单个/多个通道 channel 参数: '0'代表第D0通道 '1'代表第1通道 'all'代表所有通道 
+//  操作单个(门店)继电器设备单个/多个通道 channel 参数: '0'代表第D0通道 '1'代表D1通道 'all'代表所有通道 
 router.get('/singleEquipOpr', async (ctx, next) => {
     const { oprtype, channel, shopid } = ctx.request.query
     //  设备地址
@@ -34,7 +71,7 @@ router.get('/singleEquipOpr', async (ctx, next) => {
     let ch = ''
 
     //  操作单通道或者所有通道 标记 true为所有通道 false为单通道
-    let flag = isNaN(parseInt(channel)) 
+    let flag = isNaN(parseInt(channel))
 
     if (flag) {
         if (oprtype === 'open') {
@@ -62,19 +99,23 @@ router.get('/singleEquipOpr', async (ctx, next) => {
     let instruction = equipAddr + ch + sum
 
     //  tc = tcpClient 获取tcp服务器中的client
-    let tc = await require('../../../../modules/tcpserver').catch(err => {
+    let tcList = await require('../../../../modules/tcpserver').catch(err => {
         ctx.sendResult({ data: err }, 400, '操作失败')
         return
     })
     //  tc写指令
-    tc.write(encodeInstruction(instruction))
-
-    //  tcp服务器接收返回指令
-    const res = await new Promise(resolve => {
-        tc.on('data', data => {
-            resolve(data)
-        })
+    tcList.forEach(v => {
+        v.write(encodeInstruction(instruction))
+        // //  tcp服务器接收返回指令
+        // const res = new Promise(resolve => {
+        //     tc.on('data', data => {
+        //         resolve(data)
+        //     })
+        // })
     })
+
+
+
 
     //  接口返回数据
     ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
