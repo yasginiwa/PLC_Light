@@ -19,27 +19,28 @@ class TcpServer {
 
                 console.log(`客户端 ${client.remoteAddress.substr(7, 12)}:${client.remotePort} 已连接`)
 
-                client.setTimeout(3000, () => {
+                client.setTimeout(30000, () => {
                     console.log('TCP连接超时')
                 })
 
-                // client.on('end', () => {
-                //     clientList.splice(clientList.indexOf(client), 1)
-                // })
+                client.on('data', data => {
+                    console.log(data.toString())
+                })
 
                 clientList.push(client)
 
-                client.on('end', () => {
-                    clientList = clientList.splice(clientList.indexOf(v), 1)
+                client.on('close', () => {
+                    console.log('客户端断开连接')
+                    clientList.splice(clientList.indexOf(client), 1)
                 })
 
                 resolve(clientList)
 
             })
 
-            server.on('data', data => {
-                console.log(data)
-            })
+            // server.on('data', data => {
+            //     console.log(data)
+            // })
 
             server.on('error', error => {
                 reject(error)

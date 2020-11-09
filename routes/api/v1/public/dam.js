@@ -8,41 +8,39 @@ const crc16 = require('node-crc16')
 router.get('/', async (ctx, next) => {
 
     let clientList = await require('../../../../modules/tcpserver')
+    
+    clientList.forEach((v, i) => {
+        let equipAddr = parseInt(i + 1).toString(16).padStart(2, 0)
 
-    clientList.forEach(v => {
-        v.end()
+        let sum = crc16.checkSum(equipAddr + singleRelayStatus.status)
+
+        let statusInstruction = equipAddr + singleRelayStatus.status + sum
+
+        console.log(statusInstruction, v.remoteAddress)
+
+        v.write(encodeInstruction(statusInstruction))
+
+        // let res = new Promise((resolve, reject) => {
+        //     v.on('data', data => {
+        //         //  状态探测指令的返回Buffer长度是45 
+        //         if (data.length === 45) {
+        //             resolve(data)
+        //         } else {
+        //             reject(data)
+        //         }
+        //     })
+        // })
+
+
+
+
+        v.on('error', err => {
+            v.destroy()
+        })
     })
 
-    
+  
 
-    // clientList.forEach((v, i) => {
-
-    //     let equipAddr = parseInt(i + 1).toString(16).padStart(2, 0)
-
-    //     let sum = crc16.checkSum(equipAddr + singleRelayStatus.status)
-
-    //     let statusInstruction = equipAddr + singleRelayStatus.status + sum
-
-    //     console.log(statusInstruction)
-
-    //     v.write(encodeInstruction(statusInstruction))
-
-    //     v.on('data', data => {
-    //         //  状态探测指令的返回Buffer长度是45 
-    //         if (data.length === 45) {
-    //             console.log('res', data)
-    //             // v.end()
-    //         }
-    //     })
-
-    //     v.on('close', () => {
-    //         console.log('客户端断开连接')
-    //     })
-
-    //     v.on('error', err => {
-    //         v.destroy()
-    //     })
-    // })
 
     // let tc = await require('../../../../modules/tcpserver').catch(err => {
     //     ctx.sendResult({ data: err }, 400, '指令发送失败')
@@ -113,9 +111,6 @@ router.get('/singleEquipOpr', async (ctx, next) => {
         //     })
         // })
     })
-
-
-
 
     //  接口返回数据
     ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
