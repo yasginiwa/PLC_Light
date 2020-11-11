@@ -3,44 +3,30 @@ const net = require('net')
 const { encodeInstruction } = require('../../../../modules/tools')
 const { openSingleRelay, closeSingleRelay, openAllRelay, closeAllRelay, singleRelayStatus } = require('../../../../config/default')
 const crc16 = require('node-crc16')
+const myEmitter = require('../../../../modules/MyEmitter')
 
 //  获取所有设备在线信息
 router.get('/', async (ctx, next) => {
 
     let clientList = await require('../../../../modules/tcpserver')
-    
+
     clientList.forEach((v, i) => {
+
         let equipAddr = parseInt(i + 1).toString(16).padStart(2, 0)
 
         let sum = crc16.checkSum(equipAddr + singleRelayStatus.status)
 
         let statusInstruction = equipAddr + singleRelayStatus.status + sum
 
-        console.log(statusInstruction, v.remoteAddress)
+        console.log(statusInstruction)
 
         v.write(encodeInstruction(statusInstruction))
 
-        // let res = new Promise((resolve, reject) => {
-        //     v.on('data', data => {
-        //         //  状态探测指令的返回Buffer长度是45 
-        //         if (data.length === 45) {
-        //             resolve(data)
-        //         } else {
-        //             reject(data)
-        //         }
-        //     })
+        // v.on('data', data => {
+        //    console.log(data)
         // })
 
-
-
-
-        v.on('error', err => {
-            v.destroy()
-        })
     })
-
-  
-
 
     // let tc = await require('../../../../modules/tcpserver').catch(err => {
     //     ctx.sendResult({ data: err }, 400, '指令发送失败')
@@ -56,6 +42,19 @@ router.get('/', async (ctx, next) => {
     // })
 
     // ctx.sendResult({ data: res.toString('hex') }, 200, '指令发送成功')
+
+    let ls = []
+    myEmitter.on('getData',async data => {
+        let activeList = []
+        if (data.length === 45) {
+           let ls = await activeList.push(data)
+        }
+    })
+
+    console.log(ls)
+
+
+
 
     next()
 })
