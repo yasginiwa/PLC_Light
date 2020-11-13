@@ -1,32 +1,87 @@
 const router = require('koa-router')()
-const net = require('net')
 const { encodeInstruction } = require('../../../../modules/tools')
 const { openSingleRelay, closeSingleRelay, openAllRelay, closeAllRelay, singleRelayStatus } = require('../../../../config/default')
 const crc16 = require('node-crc16')
-const myEmitter = require('../../../../modules/MyEmitter')
+const dao = require('../../../../modules/dao')
+const TCPServer = require('../../../../modules/tcpserver')
 
-//  获取所有设备在线信息
+//  添加设备 shopno 店号 relaysn 网络继电器sn码 relaytype 网络继电器型号 relaychannel 网络继电器通道数
+router.post('/add', async(ctx, next) => {
+    let { shopno, relaysn, relaytype, relaychannel } = ctx.request.body
+    //  请求参数不完全
+    if (!shopno || !relaysn || !relaytype || !relaychannel) {
+        ctx.sendResult(null, 401, '参数错误')
+        return
+    }
+
+    await dao.execQuery(`insert into t_relay values (null, '${relaytype}', '${relaysn}', ${parseInt(relaychannel)}, default)`).catch(error => {
+        ctx.sendResult(null, 400, '添加继电器设备失败')
+        return
+    })
+
+    const resultArr = await dao.execQuery(`select id from t_relay where sn = '${relaysn}'`).catch(error => {
+        ctx.sendResult(null, 400, '添加继电器设备失败')
+        return
+    })
+
+    let relayID = resultArr[0].id
+
+    const result = await dao.execQuery(`insert into t_shop values (null, ${shopno}, ${relayID}, null, default, default)`).catch(error => {
+        ctx.sendResult(null, 400, '添加继电器设备失败')
+        return
+    })
+
+    if(result) {
+        ctx.sendResult({ data: {shopno, relaytype, relaysn, relaychannel}}, 200, '添加继电器设备成功')
+    } else {
+        ctx.sendResult(null, 400, '添加继电器设备失败')
+    }
+
+    next()
+})
+
+//  获取所有设备 并返回在线信息
 router.get('/', async (ctx, next) => {
 
-    let clientList = await require('../../../../modules/tcpserver')
+    let relays = await dao.execQuery(`select shop.no, relay.type, relay.sn from t_shop as shop inner join t_relay as relay on shop.relay = relay.id`)
 
-    clientList.forEach((v, i) => {
-
-        let equipAddr = parseInt(i + 1).toString(16).padStart(2, 0)
-
-        let sum = crc16.checkSum(equipAddr + singleRelayStatus.status)
-
-        let statusInstruction = equipAddr + singleRelayStatus.status + sum
-
-        console.log(statusInstruction)
-
-        v.write(encodeInstruction(statusInstruction))
-
-        // v.on('data', data => {
-        //    console.log(data)
-        // })
-
+    TCPServer.server.on('connection', socket => {
+        socket.on('data', data => {
+            console.log(data)
+        })
     })
+
+    // relays.forEach(v => {
+    //     v.no
+    // })
+
+    // let clientList = await require('../../../../modules/tcpserver')
+
+    // let activeList = []
+
+    // clientList.forEach((v, i) => {
+
+    //     let equipAddr = parseInt(i + 1).toString(16).padStart(2, 0)
+
+    //     let sum = crc16.checkSum(equipAddr + singleRelayStatus.status)
+
+    //     let statusInstruction = equipAddr + singleRelayStatus.status + sum
+
+    //     console.log(statusInstruction)
+
+    //     v.write(encodeInstruction(statusInstruction))
+
+    //     v.on('data', data => {
+    //         if (data.length === 45) {
+    //             activeList.push(data)
+    //             console.log(activeList)
+    //         }
+    //     })
+    // })
+
+
+
+
 
     // let tc = await require('../../../../modules/tcpserver').catch(err => {
     //     ctx.sendResult({ data: err }, 400, '指令发送失败')
@@ -43,16 +98,11 @@ router.get('/', async (ctx, next) => {
 
     // ctx.sendResult({ data: res.toString('hex') }, 200, '指令发送成功')
 
-    let ls = []
-    myEmitter.on('getData',async data => {
-        let activeList = []
-        if (data.length === 45) {
-           let ls = await activeList.push(data)
-        }
-    })
-
-    console.log(ls)
-
+    // myEmitter.on('getData', data => {
+    //     if (data.length === 45) {
+    //         console.log(data)
+    //     }
+    // })
 
 
 

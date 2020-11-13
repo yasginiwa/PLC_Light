@@ -9,7 +9,7 @@ const login = require('./routes/api/v1/public/login')
 const users = require('./routes/api/v1/private/users')
 const categories = require('./routes/api/v1/private/categories')
 const openid = require('./routes/api/v1/public/openid')
-const dam = require('./routes/api/v1/public/dam')
+const relay = require('./routes/api/v1/public/relay')
 
 const tc = require('./modules/tcpserver')
 
@@ -32,7 +32,7 @@ app.use(resextra)
 router.use(`${baseURL.public}/regist`, regist)
 router.use(`${baseURL.public}/login`, login)
 router.use(`${baseURL.public}/openid`, openid)
-router.use(`${baseURL.public}/dam`, dam)
+router.use(`${baseURL.public}/relay`, relay)
 
 //  私有接口路由
 router.use(`${baseURL.private}/users`, users)
