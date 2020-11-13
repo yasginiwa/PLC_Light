@@ -16,6 +16,33 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `t_ac`
+--
+
+DROP TABLE IF EXISTS `t_ac`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_ac` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `type` varchar(20) DEFAULT NULL,
+  `sn` varchar(40) DEFAULT NULL,
+  `channel` tinyint(4) DEFAULT NULL,
+  `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `sn` (`sn`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_ac`
+--
+
+LOCK TABLES `t_ac` WRITE;
+/*!40000 ALTER TABLE `t_ac` DISABLE KEYS */;
+/*!40000 ALTER TABLE `t_ac` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `t_categories`
 --
 
@@ -28,7 +55,7 @@ CREATE TABLE `t_categories` (
   `pid` int(11) DEFAULT NULL,
   `p_level` tinyint(4) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -37,8 +64,65 @@ CREATE TABLE `t_categories` (
 
 LOCK TABLES `t_categories` WRITE;
 /*!40000 ALTER TABLE `t_categories` DISABLE KEYS */;
-INSERT INTO `t_categories` VALUES (1,'手机',1,1),(2,'电脑',1,1),(3,'平板电脑',1,1),(4,'电视',1,1),(5,'家具',1,1),(7,'酒品',1,1),(8,'厨具',1,1),(9,'母婴',1,1);
+INSERT INTO `t_categories` VALUES (1,'手机',1,1),(2,'电脑',1,1),(3,'平板电脑',1,1),(4,'电视',1,1),(5,'家具',1,1),(8,'厨具',1,1),(9,'母婴',1,1),(10,'文娱',1,2),(11,'文娱',1,2);
 /*!40000 ALTER TABLE `t_categories` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_relay`
+--
+
+DROP TABLE IF EXISTS `t_relay`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_relay` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `type` varchar(20) DEFAULT NULL,
+  `sn` varchar(40) DEFAULT NULL,
+  `channel` tinyint(4) DEFAULT NULL,
+  `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `sn` (`sn`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_relay`
+--
+
+LOCK TABLES `t_relay` WRITE;
+/*!40000 ALTER TABLE `t_relay` DISABLE KEYS */;
+INSERT INTO `t_relay` VALUES (1,'DAM0200','JY032015066apMzq',2,'2020-11-13 07:22:13'),(2,'DAM0200','JY032015065t1G9F',2,'2020-11-13 07:22:54');
+/*!40000 ALTER TABLE `t_relay` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `t_shop`
+--
+
+DROP TABLE IF EXISTS `t_shop`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `t_shop` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `no` int(11) NOT NULL,
+  `relay` int(11) DEFAULT NULL,
+  `ac` int(11) DEFAULT NULL,
+  `relay_online` tinyint(4) DEFAULT '0',
+  `ac_online` tinyint(4) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `no` (`no`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `t_shop`
+--
+
+LOCK TABLES `t_shop` WRITE;
+/*!40000 ALTER TABLE `t_shop` DISABLE KEYS */;
+INSERT INTO `t_shop` VALUES (1,1,1,NULL,0,0),(2,2,2,NULL,0,0);
+/*!40000 ALTER TABLE `t_shop` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -79,4 +163,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-10-23 21:45:58
+-- Dump completed on 2020-11-13 17:31:57
