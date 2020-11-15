@@ -5,8 +5,9 @@ const crc16 = require('node-crc16')
 const dao = require('../../../../modules/dao')
 const TCPServer = require('../../../../modules/tcpserver')
 
+
 //  添加设备 shopno 店号 relaysn 网络继电器sn码 relaytype 网络继电器型号 relaychannel 网络继电器通道数
-router.post('/add', async(ctx, next) => {
+router.post('/add', async (ctx, next) => {
     let { shopno, relaysn, relaytype, relaychannel } = ctx.request.body
     //  请求参数不完全
     if (!shopno || !relaysn || !relaytype || !relaychannel) {
@@ -31,8 +32,8 @@ router.post('/add', async(ctx, next) => {
         return
     })
 
-    if(result) {
-        ctx.sendResult({ data: {shopno, relaytype, relaysn, relaychannel}}, 200, '添加继电器设备成功')
+    if (result) {
+        ctx.sendResult({ data: { shopno, relaytype, relaysn, relaychannel } }, 200, '添加继电器设备成功')
     } else {
         ctx.sendResult(null, 400, '添加继电器设备失败')
     }
@@ -43,24 +44,10 @@ router.post('/add', async(ctx, next) => {
 //  获取所有设备 并返回在线信息
 router.get('/', async (ctx, next) => {
 
-    let relays = await dao.execQuery(`select shop.no, relay.type, relay.sn from t_shop as shop inner join t_relay as relay on shop.relay = relay.id`)
+    //  获取所有连接的继电器数组
+    // clients = TCPServer.connectedClients()
 
-    TCPServer.server.on('connection', socket => {
-        socket.on('data', data => {
-            console.log(data)
-        })
-    })
-
-    // relays.forEach(v => {
-    //     v.no
-    // })
-
-    // let clientList = await require('../../../../modules/tcpserver')
-
-    // let activeList = []
-
-    // clientList.forEach((v, i) => {
-
+    // clients.forEach((v, i) => {
     //     let equipAddr = parseInt(i + 1).toString(16).padStart(2, 0)
 
     //     let sum = crc16.checkSum(equipAddr + singleRelayStatus.status)
@@ -69,71 +56,67 @@ router.get('/', async (ctx, next) => {
 
     //     console.log(statusInstruction)
 
+    //     //  遍历发出探测继电器指令
     //     v.write(encodeInstruction(statusInstruction))
-
-    //     v.on('data', data => {
-    //         if (data.length === 45) {
-    //             activeList.push(data)
-    //             console.log(activeList)
-    //         }
-    //     })
     // })
 
+    //  获取所有已添加到数据库的门店的活跃继电器
+    let activeClients = await dao.execQuery(`select shop.no, relay.type, relay.sn, relay.online from t_shop as shop inner join t_relay as relay on shop.relay = relay.id`).catch(error => {
+        ctx.sendResult(null, 400, '获取继电器设备信息失败')
+        return
+    })
 
-
-
-
-    // let tc = await require('../../../../modules/tcpserver').catch(err => {
-    //     ctx.sendResult({ data: err }, 400, '指令发送失败')
-    //     return
-    // })
-
-    // tc.write(encodeInstruction(testStr))
-
-    // const res = await new Promise(resolve => {
-    //     tc.on('data', data => {
-    //         resolve(data)
-    //     })
-    // })
-
-    // ctx.sendResult({ data: res.toString('hex') }, 200, '指令发送成功')
-
-    // myEmitter.on('getData', data => {
-    //     if (data.length === 45) {
-    //         console.log(data)
-    //     }
-    // })
-
-
+    ctx.sendResult({ data: activeClients }, 200, '获取继电器在线信息成功')
 
     next()
 })
 
-//  操作单个(门店)继电器设备单个/多个通道 channel 参数: '0'代表第D0通道 '1'代表D1通道 'all'代表所有通道 
-router.get('/singleEquipOpr', async (ctx, next) => {
-    const { oprtype, channel, shopid } = ctx.request.query
+//  操作单个(门店)继电器设备单个/多个通道 channel 参数: '0'代表第D0通道(设备显示第2通道) '1'代表D1通道 'all'代表所有通道 
+router.put('/', async (ctx, next) => {
+    const { oprtype, channel, shopid } = ctx.request.body
     //  设备地址
     let equipAddr = parseInt(shopid).toString(16).padStart(2, 0)
     //  操作通道
     let ch = ''
 
     //  操作单通道或者所有通道 标记 true为所有通道 false为单通道
-    let flag = isNaN(parseInt(channel))
+    let flag = isNaN(parseInt(channel)) || parseInt(channel) > 1
+
+    //  查数据库 找出要操作的继电器id
+    let relays = await dao.execQuery(`select relay from t_shop where no = ${shopid}`)
 
     if (flag) {
         if (oprtype === 'open') {
             ch = openAllRelay.ch_all
+            await dao.execQuery(`update t_relay set channel_1 = 1, channel_2 = 1 where id = ${relays[0].relay}`)
         } else if (oprtype === 'close') {
             ch = closeAllRelay.ch_all
+            await dao.execQuery(`update t_relay set channel_1 = 0, channel_2 = 0 where id = ${relays[0].relay}`)
         } else {
             ctx.sendResult(null, 400, '参数错误')
             return
         }
     } else {
         if (oprtype === 'open') {
-            ch = (channel === '0' ? openSingleRelay.ch0 : openSingleRelay.ch1)
+            if (channel === '0') {
+                ch = openSingleRelay.ch0
+                await dao.execQuery(`update t_relay set channel_2 = 1 where id = ${relays[0].relay}`)
+            } else {
+                ch = openSingleRelay.ch1
+                await dao.execQuery(`update t_relay set channel_1 = 1 where id = ${relays[0].relay}`)
+            }
+
+            // ch = (channel === '0' ? openSingleRelay.ch0 : openSingleRelay.ch1)
         } else if (oprtype === 'close') {
-            ch = (channel === '0' ? closeSingleRelay.ch0 : closeSingleRelay.ch1)
+            if (channel === '0') {
+                ch = closeSingleRelay.ch0
+                await dao.execQuery(`update t_relay set channel_2 = 0 where id = ${relays[0].relay}`)
+            } else {
+                ch = closeSingleRelay.ch1
+                await dao.execQuery(`update t_relay set channel_1 = 0 where id = ${relays[0].relay}`)
+            }
+
+            // ch = (channel === '0' ? closeSingleRelay.ch0 : closeSingleRelay.ch1)
         } else {
             ctx.sendResult(null, 400, '参数错误')
             return
@@ -145,31 +128,41 @@ router.get('/singleEquipOpr', async (ctx, next) => {
     //  拼接操作指令
     let instruction = equipAddr + ch + sum
 
+    console.log(instruction)
+
     //  tc = tcpClient 获取tcp服务器中的client
-    let tcList = await require('../../../../modules/tcpserver').catch(err => {
-        ctx.sendResult({ data: err }, 400, '操作失败')
-        return
-    })
+    clients = TCPServer.connectedClients()
+
+    // let activeClients = await dao.execQuery(`select shop.no, relay.type, relay.sn, relay.online from t_shop as shop inner join t_relay as relay on shop.relay = relay.id`).catch(error => {
+    //     ctx.sendResult(null, 400, '获取继电器设备信息失败')
+    // })
+
+
     //  tc写指令
-    tcList.forEach(v => {
+    clients.forEach(async v => {
+        let ip_address = v.remoteAddress.substr(7, 12)
+
+        let offlineClients = await dao.execQuery(`select ip_address from t_relay where online = 0`)
+
+        offlineClients.forEach(v => {
+            console.log(v.ip_address)
+            if(v.ip_address === ip_address) {
+                console.log(v.ip_address)
+                ctx.sendResult(null, 400, `设备 ${onlineStatuses.sn} 不在线 操作失败`)
+                return
+            } else {
+                //  接口返回数据
+                ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
+            }
+        })
+
         v.write(encodeInstruction(instruction))
-        // //  tcp服务器接收返回指令
-        // const res = new Promise(resolve => {
-        //     tc.on('data', data => {
-        //         resolve(data)
-        //     })
-        // })
     })
 
-    //  接口返回数据
-    ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
+
 
     next()
 })
-
-//  操作单个设备所有通道
-
-
 
 
 //  操作所有的设备的所有通道
