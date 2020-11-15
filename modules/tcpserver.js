@@ -34,7 +34,6 @@ class TcpServer {
             //     this.responses.push(snStr)
             // })
             client.on('data', async data => {
-                console.log(data.length)
                 // if (data.length !== 45) return
                 // let snStr = data.slice(15, 31).toString()
                 if (data.length !== 16) return

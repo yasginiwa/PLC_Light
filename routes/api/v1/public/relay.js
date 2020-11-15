@@ -128,8 +128,6 @@ router.put('/', async (ctx, next) => {
     //  拼接操作指令
     let instruction = equipAddr + ch + sum
 
-    console.log(instruction)
-
     //  tc = tcpClient 获取tcp服务器中的client
     clients = TCPServer.connectedClients()
 
@@ -137,29 +135,62 @@ router.put('/', async (ctx, next) => {
     //     ctx.sendResult(null, 400, '获取继电器设备信息失败')
     // })
 
+    //  查询数据库 查出offline（离线）的继电器设备的ip地址
+    let offlineClients = await dao.execQuery(`select ip_address from t_relay where online = 0`)
 
-    //  tc写指令
-    clients.forEach(async v => {
-        let ip_address = v.remoteAddress.substr(7, 12)
+    //  查询出要操作的该门店的继电器ID
+    let oprRelays = await dao.execQuery(`select relay from t_shop where no = ${parseInt(shopid)}`)
 
-        let offlineClients = await dao.execQuery(`select ip_address from t_relay where online = 0`)
+    //  查询出该id继电器的ip地址 在线状态
+    let oprRelayInfos = await dao.execQuery(`select ip_address, online, sn from t_relay where id = ${oprRelays[0].relay}`)
 
+    //  数据库查询结果为数组 从数组中拿出当前要操作的继电器对象信息
+    let oprRelayInfo = oprRelayInfos[0]
 
-        //  TODO: 当发送指令是 先检测设备在线状态当发送指令是 先检测设备在线状态
-        offlineClients.forEach(v => {
-            console.log(v.ip_address)
-            if(v.ip_address === ip_address) {
-                console.log(v.ip_address)
-                ctx.sendResult(null, 400, `设备 ${onlineStatuses.sn} 不在线 操作失败`)
-                return
-            } else {
-                //  接口返回数据
-                ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
+    //  遍历已存在的socket数组 找出ip地址和要操作继电器ip地址相同的socket 进行后续的操作
+    let client = await new Promise((resolve, reject) => {
+        clients.forEach(v => {
+            if(v.remoteAddress.substr(7, 12) === oprRelayInfo.ip_address) {
+                resolve(v)
             }
         })
-
-        v.write(encodeInstruction(instruction))
     })
+
+
+    if (oprRelayInfo.online) {
+        client.write(encodeInstruction(instruction))
+        ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
+    } else {
+        ctx.sendResult(null, 400, `门店 ${shopid} 设备sn号 ${oprRelayInfo.sn} 不在线 操作失败`)
+    }
+
+    // clients.forEach(v => {
+
+    // })
+
+    // console.log(offlineClients)
+
+
+    //  tc写指令
+    // clients.forEach(v => {
+    //     let ip_address = v.remoteAddress.substr(7, 12)
+
+
+    //     //  TODO: 当发送指令是 先检测设备在线状态当发送指令是 先检测设备在线状态
+    //     offlineClients.forEach(v => {
+    //         console.log(v.ip_address)
+    //         if(v.ip_address === ip_address) {
+    //             console.log(v.ip_address)
+    //             ctx.sendResult(null, 400, `设备 ${onlineStatuses.sn} 不在线 操作失败`)
+    //             return
+    //         } else {
+    //             //  接口返回数据
+    //             ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
+    //         }
+    //     })
+
+    //     v.write(encodeInstruction(instruction))
+    // })
 
 
 
