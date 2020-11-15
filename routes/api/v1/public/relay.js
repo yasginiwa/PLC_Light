@@ -144,6 +144,8 @@ router.put('/', async (ctx, next) => {
 
         let offlineClients = await dao.execQuery(`select ip_address from t_relay where online = 0`)
 
+
+        //  TODO: 当发送指令是 先检测设备在线状态当发送指令是 先检测设备在线状态
         offlineClients.forEach(v => {
             console.log(v.ip_address)
             if(v.ip_address === ip_address) {
