@@ -4,6 +4,7 @@ const { openSingleRelay, closeSingleRelay, openAllRelay, closeAllRelay, singleRe
 const crc16 = require('node-crc16')
 const dao = require('../../../../modules/dao')
 const TCPServer = require('../../../../modules/tcpserver')
+const schedule = require('node-schedule')
 
 
 //  添加设备 shopno 店号 relaysn 网络继电器sn码 relaytype 网络继电器型号 relaychannel 网络继电器通道数
@@ -43,22 +44,6 @@ router.post('/add', async (ctx, next) => {
 
 //  获取所有设备 并返回在线信息
 router.get('/', async (ctx, next) => {
-
-    //  获取所有连接的继电器数组
-    // clients = TCPServer.connectedClients()
-
-    // clients.forEach((v, i) => {
-    //     let equipAddr = parseInt(i + 1).toString(16).padStart(2, 0)
-
-    //     let sum = crc16.checkSum(equipAddr + singleRelayStatus.status)
-
-    //     let statusInstruction = equipAddr + singleRelayStatus.status + sum
-
-    //     console.log(statusInstruction)
-
-    //     //  遍历发出探测继电器指令
-    //     v.write(encodeInstruction(statusInstruction))
-    // })
 
     //  获取所有已添加到数据库的门店的活跃继电器
     let activeClients = await dao.execQuery(`select shop.no, relay.type, relay.sn, relay.online from t_shop as shop inner join t_relay as relay on shop.relay = relay.id`).catch(error => {
@@ -131,12 +116,8 @@ router.put('/', async (ctx, next) => {
     //  tc = tcpClient 获取tcp服务器中的client
     clients = TCPServer.connectedClients()
 
-    // let activeClients = await dao.execQuery(`select shop.no, relay.type, relay.sn, relay.online from t_shop as shop inner join t_relay as relay on shop.relay = relay.id`).catch(error => {
-    //     ctx.sendResult(null, 400, '获取继电器设备信息失败')
-    // })
-
-    //  查询数据库 查出offline（离线）的继电器设备的ip地址
-    let offlineClients = await dao.execQuery(`select ip_address from t_relay where online = 0`)
+    // //  查询数据库 查出offline（离线）的继电器设备的ip地址
+    // let offlineClients = await dao.execQuery(`select ip_address from t_relay where online = 0`)
 
     //  查询出要操作的该门店的继电器ID
     let oprRelays = await dao.execQuery(`select relay from t_shop where no = ${parseInt(shopid)}`)
@@ -150,12 +131,11 @@ router.put('/', async (ctx, next) => {
     //  遍历已存在的socket数组 找出ip地址和要操作继电器ip地址相同的socket 进行后续的操作
     let client = await new Promise((resolve, reject) => {
         clients.forEach(v => {
-            if(v.remoteAddress.substr(7, 12) === oprRelayInfo.ip_address) {
+            if (v.remoteAddress.substr(7, 13) === oprRelayInfo.ip_address) {
                 resolve(v)
             }
         })
     })
-
 
     if (oprRelayInfo.online) {
         client.write(encodeInstruction(instruction))
@@ -192,55 +172,98 @@ router.put('/', async (ctx, next) => {
     //     v.write(encodeInstruction(instruction))
     // })
 
-
-
     next()
+})
+
+
+//  定时调度控制所有继电器设备openAt 打开时间 closeAt 关闭时间
+router.put('/schedule', async (ctx, next) => {
+    let { openat, closeat } = ctx.request.body
+
+    //  转换打开和关闭事件 成schedule能识别的事件格式 59 59 12 * * * 代表 12:59:59
+    let openStr = openat.split(':').reverse().join(' ').padEnd(14, ' *')
+    let closeStr = closeat.split(':').reverse().join(' ').padEnd(14, ' *')
+
+
+    let clients = TCPServer.connectedClients()
+
+    //  fe 十进制 254 表示所有设备地址
+    let equipAddr = 'fe'
+
+    //  打开通道指令
+    const openCh = openAllRelay.ch_all
+    //  关闭通道指令
+    const closeCh = closeAllRelay.ch_all
+
+    //  crc16校验码
+    let openSum = crc16.checkSum(equipAddr + openCh)
+    let closeSum = crc16.checkSum(equipAddr + closeCh)
+    //  拼接操作指令
+    let openInstruction = equipAddr + openCh + openSum
+    let closeInstruction = equipAddr + closeCh + closeSum
+
+    clients.forEach(v => {
+        schedule.scheduleJob(openStr, async () => {
+            v.write(encodeInstruction(openInstruction))
+            await dao.execQuery(`update t_relay set channel_1 = 1, channel_2 = 1`)
+        })
+
+        schedule.scheduleJob(closeStr, async () => {
+            v.write(encodeInstruction(closeInstruction))
+            await dao.execQuery(`update t_relay set channel_1 = 0, channel_2 = 0`)
+        })
+    })
+
+    //  更新数据库打开、关闭定时事件
+    await dao.execQuery(`update t_relay set open_at = '${openat}', close_at = '${closeat}'`)
+
+    ctx.sendResult({ 'relay': 'all', 'openat': openat, 'closeat': closeat }, 200, '定时调度设置成功')
 })
 
 
 //  操作所有的设备的所有通道
-router.get('/equipallopr', async (ctx, next) => {
+// router.get('/equipallopr', async (ctx, next) => {
 
-    const { oprtype } = ctx.request.query
+//     const { oprtype } = ctx.request.query
 
-    let channel = 1
+//     let channel = 1
 
-    for (let shopid = 0; shopid < 3; shopid++) {
-        //  设备地址
-        let equipAddr = parseInt(shopid).toString(16).padStart(2, 0)
-        //  操作通道
-        let ch = ''
-        if (oprtype === 'open') {
-            ch = (channel === '0' ? openRelay.ch0 : openRelay.ch1)
-        } else if (oprtype === 'close') {
-            ch = (channel === '0' ? closeRelay.ch0 : closeRelay.ch1)
-        } else {
-            ctx.sendResult(null, 400, '参数错误')
-        }
-        //  crc16校验码
-        let sum = crc16.checkSum(equipAddr + ch)
-        //  拼接操作指令
-        let instruction = equipAddr + ch + sum
+//     for (let shopid = 0; shopid < 3; shopid++) {
+//         //  设备地址
+//         let equipAddr = parseInt(shopid).toString(16).padStart(2, 0)
+//         //  操作通道
+//         let ch = ''
+//         if (oprtype === 'open') {
+//             ch = (channel === '0' ? openRelay.ch0 : openRelay.ch1)
+//         } else if (oprtype === 'close') {
+//             ch = (channel === '0' ? closeRelay.ch0 : closeRelay.ch1)
+//         } else {
+//             ctx.sendResult(null, 400, '参数错误')
+//         }
+//         //  crc16校验码
+//         let sum = crc16.checkSum(equipAddr + ch)
+//         //  拼接操作指令
+//         let instruction = equipAddr + ch + sum
 
-        //  tc = tcpClient 获取tcp服务器中的client
-        let tc = await require('../../../../modules/tcpserver').catch(err => {
-            ctx.sendResult({ data: err }, 400, '操作失败')
-            return
-        })
-        //  tc写指令
-        tc.write(encodeInstruction(instruction))
+//         //  tc = tcpClient 获取tcp服务器中的client
+//         let tc = await require('../../../../modules/tcpserver').catch(err => {
+//             ctx.sendResult({ data: err }, 400, '操作失败')
+//             return
+//         })
+//         //  tc写指令
+//         tc.write(encodeInstruction(instruction))
 
-        //  tcp服务器接收返回指令
-        const res = await new Promise(resolve => {
-            tc.on('data', data => {
-                resolve(data)
-            })
-        })
-        //  接口返回数据
-        ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
-    }
+//         //  tcp服务器接收返回指令
+//         const res = await new Promise(resolve => {
+//             tc.on('data', data => {
+//                 resolve(data)
+//             })
+//         })
+//         //  接口返回数据
+//         ctx.sendResult({ shopid, channel, oprtype }, 200, '操作成功')
+//     }
 
-    next()
-})
+//     next()
+// })
 
 module.exports = router.routes()
