@@ -1,6 +1,8 @@
 const net = require('net')
 const { encodeInstruction } = require('./tools')
 const dao = require('./dao')
+const { timeStamp } = require('console')
+const { runInThisContext } = require('vm')
 
 
 class TcpServer {
@@ -31,17 +33,18 @@ class TcpServer {
 
                 //  client首次连接 发出登录包 包内是门店信息 长度为1
                 if (data.length == 1) {
-                    client.id = data.toString('hex')
                     //  给每个客户端添加一个唯一id 用于区分每个client
-                    if (this.clients.length === 0) {
-                        this.clients.push(client)
-                    } else {
-                        this.clients.forEach(v => {
-                            if (v.id !== client.id) {
-                                console.log(`vid: ${v.id}, cid: ${client.id}`)
-                                this.clients.push(client)
-                            }
-                        })
+                    client.id = data.toString('hex')
+                    //  将所有client加入到clients数组
+                    this.clients.push(client)
+
+                    if (this.clients.length) {
+                        this.clients.reverse()
+                        let obj = {}
+                        this.clients = this.clients.reduce((prev, cur) => {
+                            obj[cur.id] ? '' : obj[cur.id] = true && prev.push(cur)
+                            return prev
+                        }, [])
                     }
 
 
@@ -62,13 +65,13 @@ class TcpServer {
                 }
 
 
-                this.clients.forEach(v => {
-                    console.log('vid' + v.id)
-                })
 
                 // if (data.length !== 45) return
                 // let snStr = data.slice(15, 31).toString()
                 if (data.length !== 16) return
+
+                this.clients.forEach(v => console.log('client ' + v.id))
+
                 let snStr = data.toString()
                 //  先把所有的继电器在线状态设置为0 离线
                 let setOfflineCount = await dao.execQuery(`update t_relay set online_count = (online_count + 1) where sn <> '${snStr}'`)
@@ -90,43 +93,22 @@ class TcpServer {
                 console.log(`${client.remoteAddress.substr(7, client.remoteAddress.length)} 连接超时`)
             })
 
-            client.on('end', () => {
-                console.log('end')
-            })
-
-            client.on('drain', () => {
-                console.log('drain')
-            })
-
             client.on('destroy', () => {
                 console.log(`客户端 ${client.remoteAddress.substr(7, client.remoteAddress.length)}:${client.remotePort} 销毁连接`)
-
-                let index = this.clients.indexOf(client); // 找到当前client的index
-
-                this.clients.splice(index, 1); // 此客户端已断开连接 数组中移除此客户端
             })
 
             client.on('close', () => {
                 console.log(`客户端 ${client.remoteAddress.substr(7, client.remoteAddress.length)}:${client.remotePort} 断开连接`)
-
-                // let index = this.clients.indexOf(client); // 找到当前client的index
-
-                // this.clients.splice(index, 1); // 此客户端已断开连接 数组中移除此客户端
-                this.clients = []
-
-                client.destroy()
             })
 
             client.on('error', error => {
                 console.log(`客户端 ${client.remoteAddress.substr(7, client.remoteAddress.length)}:${client.remotePort} 连接出错`)
 
-                this.clients = []
-
                 // let index = this.clients.indexOf(client); // 找到当前client的index
 
                 // this.clients.splice(index, 1); // 此客户端已断开连接 数组中移除此客户端
 
-                client.destroy()
+                // client.destroy()
             })
 
         })
@@ -141,13 +123,8 @@ class TcpServer {
     }
 
     connectedClients() {
-        // let client = {}
-        // this.clients = this.clients.map((v, i) => {
-
-        // })
         return this.clients
     }
-
 }
 
 module.exports = TcpServer.getInstance()

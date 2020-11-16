@@ -116,9 +116,6 @@ router.put('/', async (ctx, next) => {
     //  tc = tcpClient 获取tcp服务器中的client
     clients = TCPServer.connectedClients()
 
-    // //  查询数据库 查出offline（离线）的继电器设备的ip地址
-    // let offlineClients = await dao.execQuery(`select ip_address from t_relay where online = 0`)
-
     //  查询出要操作的该门店的继电器ID
     let oprRelays = await dao.execQuery(`select relay from t_shop where no = ${parseInt(shopid)}`)
 
