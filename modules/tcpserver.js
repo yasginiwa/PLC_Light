@@ -38,6 +38,7 @@ class TcpServer {
                     //  将所有client加入到clients数组
                     this.clients.push(client)
 
+                    //  数组去重
                     if (this.clients.length) {
                         this.clients.reverse()
                         let obj = {}
@@ -81,8 +82,8 @@ class TcpServer {
                 await dao.execQuery(`update t_relay set online_count = 0, online = 1, ip_address = '${client.remoteAddress.substr(7, client.remoteAddress.length)}' where id = ${queryRes[0].id}`)
                 // let updateRes = await dao.execQuery(`update t_relay set online = 1 where id = ${queryRes[0].id}`)
 
-                //  当某个继电器的online_count递增到4时 设置online_count=0 并且设置online = 0
-                let inactiveClients = await dao.execQuery(`select id from t_relay where online_count >= 4`)
+                //  当某个继电器的online_count递增到3时 设置online_count=0 并且设置online = 0
+                let inactiveClients = await dao.execQuery(`select id from t_relay where online_count >= 3`)
                 inactiveClients.forEach(async v => {
                     await dao.execQuery(`update t_relay set online = 0, online_count = 0 where id = ${v.id}`)
                 });
@@ -108,7 +109,7 @@ class TcpServer {
 
                 // this.clients.splice(index, 1); // 此客户端已断开连接 数组中移除此客户端
 
-                // client.destroy()
+                client.destroy()
             })
 
         })
